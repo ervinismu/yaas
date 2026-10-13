@@ -36,4 +36,10 @@ The browser preview runs a small web server inside Obsidian, for your computer o
 
 Other people cannot see it, even on the same Wi-Fi.
 
+What else YAAS touches, and why:
+
+- **Your vault's file list**: only to show your images when you choose a backdrop in the slides panel.
+- **The clipboard**: YAAS only writes to it, never reads it. It copies the preview link when you open the browser, and code or a diagram's source when you click a copy button.
+- **Files**: exports are saved next to the note. A PDF export also writes a temporary page into YAAS's own plugin folder for a moment, then deletes it.
+
 Slides can show pictures from `https://` links you put in a note; those load from the internet like any image.

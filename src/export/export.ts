@@ -1,8 +1,5 @@
 // Export: the deck as one HTML file, or a landscape PDF, next to the note. Speaker notes are left out
-import { arrayBufferToBase64, Notice, TFile } from 'obsidian';
-import { unlink, writeFile } from 'fs/promises';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { arrayBufferToBase64, FileSystemAdapter, Notice, TFile } from 'obsidian';
 import { imageType, STAGE_H, STAGE_W } from '../constants';
 import type YaasPlugin from '../main';
 import type { WebDeck } from '../types';
@@ -61,12 +58,15 @@ export async function exportHtml(plugin: YaasPlugin, file: TFile): Promise<strin
 // landscape, whatever the computer's print settings say. Desktop only
 export async function exportPdf(plugin: YaasPlugin, file: TFile): Promise<string | null> {
 	const BrowserWindow = pdfWindowClass();
-	if (!BrowserWindow) {
+	const adapter = plugin.app.vault.adapter;
+	if (!BrowserWindow || !(adapter instanceof FileSystemAdapter)) {
 		new Notice('This version of Obsidian cannot create a PDF, so an HTML file was exported instead. Open it in a browser and print it.', 10000);
 		return exportHtml(plugin, file);
 	}
 	const notice = new Notice('Making the PDF…', 0);
-	const page = join(tmpdir(), `yaas-${Date.now()}.html`);
+	// The page is written for a moment into YAAS's own plugin folder, through Obsidian's file API, so the hidden
+	// window can open it as a file: images inside it load the same way as in the HTML export
+	const page = `${plugin.manifest.dir ?? ''}/print-${Date.now()}.html`;
 	const win = new BrowserWindow({
 		show: false,
 		width: STAGE_W,
@@ -74,8 +74,8 @@ export async function exportPdf(plugin: YaasPlugin, file: TFile): Promise<string
 		webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true },
 	});
 	try {
-		await writeFile(page, await sharePage(plugin, file));
-		await win.loadFile(page);
+		await adapter.write(page, await sharePage(plugin, file));
+		await win.loadFile(adapter.getFullPath(page));
 		// Let images decode before printing
 		await new Promise((resolve) => window.setTimeout(resolve, 600));
 		const pdf = await win.webContents.printToPDF({
@@ -96,6 +96,6 @@ export async function exportPdf(plugin: YaasPlugin, file: TFile): Promise<string
 		return null;
 	} finally {
 		win.destroy();
-		unlink(page).catch(() => { /* the system cleans its temp folder */ });
+		adapter.remove(page).catch(() => { /* already gone */ });
 	}
 }

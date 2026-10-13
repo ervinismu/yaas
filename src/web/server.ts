@@ -1,15 +1,15 @@
 // The live preview: a small web server on this computer only, http://localhost:<port>/?file=…&key=…
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'http';
 import { TFile } from 'obsidian';
 import { imageType } from '../constants';
 import type YaasPlugin from '../main';
+import { loadHttp, type HttpRequest, type HttpResponse, type HttpServer } from './http';
 import { previewPage } from './viewer';
 
 export class WebPreview {
-	private server: Server | null = null;
+	private server: HttpServer | null = null;
 	private port = 0;
 	/** Open event streams, each with the note it follows */
-	private clients = new Map<ServerResponse, string>();
+	private clients = new Map<HttpResponse, string>();
 	// Every link carries this key: another website open in the browser cannot guess it to read the vault
 	readonly token = Array.from(window.crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
 
@@ -25,8 +25,10 @@ export class WebPreview {
 
 	start(): Promise<void> {
 		const port = this.plugin.settings.port;
+		const http = loadHttp();
+		if (!http) return Promise.reject(new Error('The browser preview needs the desktop app.'));
 		return new Promise((resolve, reject) => {
-			const server = createServer((req, res) => {
+			const server = http.createServer((req, res) => {
 				this.handle(req, res).catch((error) => {
 					console.error('YAAS web preview', error);
 					if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -60,7 +62,7 @@ export class WebPreview {
 		return file instanceof TFile && file.extension === 'md' ? file : null;
 	}
 
-	private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
+	private async handle(req: HttpRequest, res: HttpResponse): Promise<void> {
 		const send = (status: number, type: string, body: string | Uint8Array, headers: Record<string, string> = {}) => {
 			res.writeHead(status, { 'Content-Type': type, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers });
 			res.end(body);

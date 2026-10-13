@@ -1,6 +1,6 @@
 {
 	"name": "yaas",
-	"version": "0.6.2",
+	"version": "0.6.3",
 	"description": "Present an Obsidian note as full-screen slides, with colours, images and layouts per slide.",
 	"main": "main.js",
 	"type": "module",
@@ -10,7 +10,11 @@
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "eslint ."
 	},
-	"keywords": ["obsidian", "slides", "presentation"],
+	"keywords": [
+		"obsidian",
+		"slides",
+		"presentation"
+	],
 	"author": "ervinismu",
 	"license": "MIT",
 	"devDependencies": {
